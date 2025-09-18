@@ -7,7 +7,8 @@ ContextWeaver solves this by:
 - Scanning your repository or selected files
 - Collecting metadata and structure automatically
 - Embedding file contents into a single, organized text document
-- Supporting filtering (--include, --exclude), size limits, and token counts so you can fine-tune what gets included
+- Supporting filtering (--include, --exclude), size limits, and token counts so you can fine-tune what gets included.
+  
 The result is a ready-to-share snapshot of your repo that you can paste into an LLM for debugging, documentation, or collaboration.
 
 ---
