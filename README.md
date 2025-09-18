@@ -16,7 +16,6 @@ It includes:
 git clone https://github.com/kkrishnan10/ContextWeaver
 cd ContextWeaver
 
-**Usage** 
 # Analyze current directory
 python src/main.py .
 
