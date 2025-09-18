@@ -16,4 +16,23 @@ It includes:
 git clone https://github.com/kkrishnan10/ContextWeaver
 cd ContextWeaver
 
+**Usage** 
+# Analyze current directory
+python src/main.py .
+
+# Analyze a specific directory
+python src/main.py ./src
+
+# Analyze specific files
+python src/main.py src/main.py README.md
+
+# Save output to a file
+python src/main.py . -o snapshot.txt
+
+# Estimate token count (~chars/4) printed to stderr
+python src/main.py . --tokens
+
+# Only include certain file patterns (comma-separated)
+python src/main.py . --include "*.py,*.md"
+
 
