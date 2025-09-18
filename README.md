@@ -44,5 +44,5 @@ python src/main.py . --tokens
 # Only include certain file patterns (comma-separated)
 python src/main.py . --include "*.py,*.md"
 ```
-##License
+## License
 This project is licensed under the MIT License.
