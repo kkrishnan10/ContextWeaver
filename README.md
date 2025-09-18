@@ -21,9 +21,11 @@ source .venv/bin/activate
 
 pip install -r requirements.txt
 
-```zsh
+```
 
 ## Usage
+
+```bash
 # Analyze current directory
 python src/main.py .
 
@@ -41,5 +43,6 @@ python src/main.py . --tokens
 
 # Only include certain file patterns (comma-separated)
 python src/main.py . --include "*.py,*.md"
-
-
+```
+##License
+This project is licensed under the MIT License.
