@@ -1,12 +1,14 @@
 # ContextWeaver
 
-**ContextWeaver** is a CLI that scans a local repository and produces a single, well-structured text snapshot that’s easy for LLMs to understand.
+**ContextWeaver** is a command-line tool designed to help developers package and share their codebase with Large Language Models (LLMs) like ChatGPT.
+When you want to ask an AI tool about your code, it’s often hard to know what and how much to copy. 
 
-It includes:
-- Git info 
-- Project structure tree
-- File contents 
-- Summary stats (files, lines), optional token estimate
+ContextWeaver solves this by:
+Scanning your repository or selected files
+Collecting metadata and structure automatically
+Embedding file contents into a single, organized text document
+Supporting filtering (--include, --exclude), size limits, and token counts so you can fine-tune what gets included
+The result is a ready-to-share snapshot of your repo that you can paste into an LLM for debugging, documentation, or collaboration.
 
 ---
 
