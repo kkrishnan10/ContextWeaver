@@ -15,7 +15,14 @@ It includes:
 ```bash
 git clone https://github.com/kkrishnan10/ContextWeaver
 cd ContextWeaver
+# virtual env
+python3 -m venv .venv
+source .venv/bin/activate
 
+pip install -r requirements.txt
+
+'''zsh
+## Usage
 # Analyze current directory
 python src/main.py .
 
