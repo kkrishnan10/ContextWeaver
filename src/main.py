@@ -1,4 +1,4 @@
-import argparse, sys, os, subprocess
+import argparse, sys, os, subprocess, time, datetime
 from pygments.lexers import guess_lexer_for_filename
 from pygments.util import ClassNotFound
 
@@ -23,6 +23,38 @@ def get_all_files(paths):
                         continue
                     files.append(os.path.join(root, f))
     return files
+
+def get_recent_files(files, days=7):
+    """Filter files to only include those modified within the last N days"""
+    cutoff_time = time.time() - (days * 24 * 60 * 60)
+    recent_files = []
+    
+    for fp in files:
+        try:
+            mtime = os.path.getmtime(fp)
+            if mtime >= cutoff_time:
+                recent_files.append(fp)
+        except OSError:
+            continue
+    
+    return recent_files
+
+def format_time_ago(mtime):
+    """Format modification time as human-readable 'X days ago' string"""
+    now = time.time()
+    diff_seconds = now - mtime
+    diff_days = diff_seconds / (24 * 60 * 60)
+    
+    if diff_days < 1:
+        diff_hours = diff_seconds / (60 * 60)
+        if diff_hours < 1:
+            diff_minutes = diff_seconds / 60
+            return f"{int(diff_minutes)} minutes ago"
+        return f"{int(diff_hours)} hours ago"
+    elif diff_days < 7:
+        return f"{int(diff_days)} days ago"
+    else:
+        return datetime.datetime.fromtimestamp(mtime).strftime("%Y-%m-%d")
 
 def get_git_info(base):
     try:
@@ -59,11 +91,12 @@ def structure_tree(files, base):
 
     return "\n".join(walk(tree))
 
-def read_files(files, base):
+def read_files(files, base, show_modified_time=False):
     blocks, total_lines, total_chars = [], 0, 0
     for fp in sorted(files):
         try:
             size = os.path.getsize(fp)
+            mtime = os.path.getmtime(fp)
             with open(fp, "r", encoding="utf-8", errors="ignore") as f:
                 rel = os.path.relpath(fp, base)
                 content = f.read()
@@ -75,7 +108,13 @@ def read_files(files, base):
                     lang = lexer.aliases[0] if lexer.aliases else ""
                 except ClassNotFound:
                     pass
-                blocks.append(f"### File: {rel}\n```{lang}\n{content}\n```")
+                
+                file_header = f"### File: {rel}"
+                if show_modified_time:
+                    time_ago = format_time_ago(mtime)
+                    file_header += f" (Modified: {time_ago})"
+                
+                blocks.append(f"{file_header}\n```{lang}\n{content}\n```")
                 total_lines += content.count("\n") + 1
                 total_chars += len(content)
         except Exception as e:
@@ -88,6 +127,7 @@ def main():
     parser.add_argument("paths", nargs="+", help="Paths to files or directories")
     parser.add_argument("-o","--output", help="Write output to file (default: stdout)")
     parser.add_argument("--tokens", action="store_true", help="Estimate token count (~chars/4) to stderr")
+    parser.add_argument("-r","--recent", action="store_true", help="Only include files modified in the last 7 days")
     args = parser.parse_args()
 
     first_abs = os.path.abspath(args.paths[0])
@@ -98,10 +138,22 @@ def main():
         print("Error: No files found in the specified paths.", file=sys.stderr)
         sys.exit(1)
 
+    # Apply recent filter if requested
+    if args.recent:
+        original_count = len(files)
+        files = get_recent_files(files)
+        if not files:
+            print("Error: No files modified in the last 7 days found.", file=sys.stderr)
+            sys.exit(1)
+        print(f"Filtered to {len(files)} recent files (out of {original_count} total)", file=sys.stderr)
+
     git = get_git_info(base)
     tree = structure_tree(files, base)
-    contents, total_lines, total_chars = read_files(files, base)
+    contents, total_lines, total_chars = read_files(files, base, show_modified_time=args.recent)
+    
     summary = f"- Total files: {len(files)}\n- Total lines: {total_lines}"
+    if args.recent:
+        summary += "\n- Showing only files modified in the last 7 days"
 
     output = f"""# Repository Context
 

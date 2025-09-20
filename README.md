@@ -7,7 +7,8 @@ ContextWeaver solves this by:
 - Scanning your repository or selected files
 - Collecting metadata and structure automatically
 - Embedding file contents into a single, organized text document
-- Supporting filtering (--include, --exclude), size limits, and token counts so you can fine-tune what gets included.
+- Supporting filtering options like file patterns and recent changes
+- Providing size limits and token counts so you can fine-tune what gets included
   
 The result is a ready-to-share snapshot of your repo that you can paste into an LLM for debugging, documentation, or collaboration.
 
@@ -46,6 +47,29 @@ python src/main.py . --tokens
 
 # Only include certain file patterns (comma-separated)
 python src/main.py . --include "*.py,*.md"
+
+# Only include files modified in the last 7 days
+python src/main.py . --recent
+
+# Short form of recent flag
+python src/main.py . -r
+
+# Combine recent filter with output file
+python src/main.py . --recent -o recent-changes.txt
 ```
+
+## Features
+
+### Recent Changes Filter
+The `--recent` (or `-r`) flag filters the output to only include files that have been modified within the last 7 days. This is particularly useful when:
+- Working with large codebases and wanting to focus on active development areas
+- Sharing recent changes with team members or AI assistants
+- Debugging issues related to recent modifications
+
+When using the recent filter, ContextWeaver will:
+- Show modification timestamps for each file (e.g., "Modified: 2 hours ago")
+- Display the total number of recent files found
+- Add a note in the summary indicating recent filtering is active
+
 ## License
 This project is licensed under the MIT License.
