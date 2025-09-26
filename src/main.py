@@ -1,90 +1,90 @@
-# main.py
+
 import argparse
 import sys
 import os
 import subprocess
-from pygments.lexers import guess_lexer_for_filename
-from pygments.util import ClassNotFound
+from typing import List, Iterable, Tuple
 
 TOOL_VERSION = "0.1.0"
+EXCLUDED_DIRS = {"venv"}
 
-def get_all_files(paths, verbose=False):
-    all_files = []
-    excluded_dirs = {'venv'}
+def eprint(msg: str) -> None:
+    print(msg, file=sys.stderr)
 
-    for path in paths:
-        abs_path = os.path.abspath(path)
-
-        if os.path.isfile(abs_path):
-            if not os.path.basename(abs_path).startswith('.'):
-                all_files.append(abs_path)
+def iter_files(paths: Iterable[str], verbose: bool = False) -> List[str]:
+    """Yield absolute file paths under the given paths, skipping hidden files/dirs and EXCLUDED_DIRS."""
+    results: List[str] = []
+    for p in paths:
+        ap = os.path.abspath(p)
+        if os.path.isfile(ap):
+            if not os.path.basename(ap).startswith('.'):
+                results.append(ap)
                 if verbose:
-                    print(f"Reading file: {abs_path}", file=sys.stderr)
-
-        elif os.path.isdir(abs_path):
+                    eprint(f"Reading file: {ap}")
+        elif os.path.isdir(ap):
             if verbose:
-                print(f"Processing directory: {abs_path}", file=sys.stderr)
-            for root, dirs, files in os.walk(abs_path):
-                dirs[:] = [d for d in dirs if not d.startswith('.') and d not in excluded_dirs]
-                for file in files:
-                    if not file.startswith('.'):
-                        file_path = os.path.join(root, file)
-                        all_files.append(file_path)
-                        if verbose:
-                            print(f"Reading file: {file_path}", file=sys.stderr)
-    return all_files
+                eprint(f"Processing directory: {ap}")
+            for root, dirs, files in os.walk(ap):
+                
+                dirs[:] = [d for d in dirs if not d.startswith('.') and d not in EXCLUDED_DIRS]
+                for fname in files:
+                    if fname.startswith('.'):
+                        continue
+                    fpath = os.path.join(root, fname)
+                    results.append(fpath)
+                    if verbose:
+                        eprint(f"Reading file: {fpath}")
+        else:
+            if verbose:
+                eprint(f"Skipping non-existent path: {ap}")
+    return results
 
-def get_git_info(repo_path):
+def read_text(path: str) -> Tuple[str, str]:
+    """Return (content, error). error is '' on success."""
     try:
-        commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo_path, text=True, stderr=subprocess.PIPE).strip()
-        branch = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], cwd=repo_path, text=True, stderr=subprocess.PIPE).strip()
-        author = subprocess.check_output(['git', 'log', '-1', '--pretty=format:%an <%ae>'], cwd=repo_path, text=True, stderr=subprocess.PIPE).strip()
-        date = subprocess.check_output(['git', 'log', '-1', '--pretty=format:%ad'], cwd=repo_path, text=True, stderr=subprocess.PIPE).strip()
-        return f"- Commit: {commit}\n- Branch: {branch}\n- Author: {author}\n- Date: {date}"
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return "Not a git repository"
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            return f.read(), ""
+    except Exception as ex:
+        return "", f"{type(ex).__name__}: {ex}"
 
-def main():
-    parser = argparse.ArgumentParser(description="Repository Context Packager")
+def header_for(path: str) -> str:
+    rel = os.path.relpath(path, start=os.getcwd())
+    return f"### File: {rel}"
 
-    parser.add_argument(
-        "-v", "--version",
-        action="version",
-        version=f"%(prog)s {TOOL_VERSION}"
-    )
+def main() -> None:
+    parser = argparse.ArgumentParser(description="ContextWeaver: print repository files as a single context.")
+    parser.add_argument("-V", "--version", action="version", version=f"%(prog)s {TOOL_VERSION}")
 
-    parser.add_argument(
-        "paths",
-        nargs="+",
-        help="Paths to files or directories to include in the context."
-    )
+    parser.add_argument("paths", nargs="+", help="Files or directories to include")
 
-    parser.add_argument(
-        "-o", "--output",
-        help="Path to the output file. If not specified, prints to standard output."
-    )
+    
+    parser.add_argument("-v", "--verbose", action="store_true",
+                        help="Print progress to stderr while scanning/reading files")
 
-    parser.add_argument(
-        "--tokens",
-        action="store_true",
-        help="Estimate and display the token count for the context."
-    )
-
-    parser.add_argument(
-        "--verbose", "-V",
-        action="store_true",
-        help="Print progress messages to stderr as files/directories are processed."
-    )
+    
+    parser.add_argument("-o", "--output", help="Write output to this file instead of stdout")
 
     args = parser.parse_args()
 
-    file_list = get_all_files(args.paths, verbose=args.verbose)
-
-    if not file_list:
-        print("Error: No files found in the specified paths.", file=sys.stderr)
+    files = iter_files(args.paths, verbose=args.verbose)
+    if not files:
+        eprint("Error: no files found under the provided paths.")
         sys.exit(1)
 
-    
+    out = open(args.output, "w", encoding="utf-8") if args.output else sys.stdout
+    try:
+        for f in files:
+            content, err = read_text(f)
+            print(header_for(f), file=out)
+            print("```", file=out)
+            if err:
+                print(f"[ERROR] {err}", file=out)
+            else:
+                print(content, end="" if content.endswith("\n") else "\n", file=out)
+            print("```", file=out)
+    finally:
+        if args.output:
+            out.close()
 
 if __name__ == "__main__":
     main()
