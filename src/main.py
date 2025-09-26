@@ -4,9 +4,7 @@ from pygments.util import ClassNotFound
 
 TOOL_VERSION = "0.1.0"
 MAX_BYTES = 16 * 1024
-
 EXCLUDED_DIRS = {".git", ".venv", "venv", "__pycache__"}
-
 
 def get_all_files(paths, verbose=False):
     files = []
@@ -14,9 +12,9 @@ def get_all_files(paths, verbose=False):
         ap = os.path.abspath(p)
         if os.path.isfile(ap):
             if not os.path.basename(ap).startswith("."):
-                files.append(ap)
                 if verbose:
                     print(f"Reading file: {ap}", file=sys.stderr)
+                files.append(ap)
         elif os.path.isdir(ap):
             if verbose:
                 print(f"Processing directory: {ap}", file=sys.stderr)
@@ -25,12 +23,11 @@ def get_all_files(paths, verbose=False):
                 for f in fs:
                     if f.startswith("."):
                         continue
-                    full = os.path.join(root, f)
-                    files.append(full)
+                    fp = os.path.join(root, f)
                     if verbose:
-                        print(f"Reading file: {full}", file=sys.stderr)
+                        print(f"Reading file: {fp}", file=sys.stderr)
+                    files.append(fp)
     return files
-
 
 def get_git_info(base):
     try:
@@ -38,11 +35,10 @@ def get_git_info(base):
         commit = run("git", "rev-parse", "HEAD")
         branch = run("git", "rev-parse", "--abbrev-ref", "HEAD")
         author = run("git", "log", "-1", "--pretty=format:%an <%ae>")
-        date = run("git", "log", "-1", "--pretty=format:%ad")
+        date   = run("git", "log", "-1", "--pretty=format:%ad")
         return f"- Commit: {commit}\n- Branch: {branch}\n- Author: {author}\n- Date: {date}"
     except Exception:
         return "Not a git repository"
-
 
 def structure_tree(files, base):
     tree = {}
@@ -67,8 +63,7 @@ def structure_tree(files, base):
 
     return "\n".join(walk(tree))
 
-
-def read_files(files, base, show_line_numbers=False):
+def read_files(files, base):
     blocks, total_lines, total_chars = [], 0, 0
     for fp in sorted(files):
         try:
@@ -84,11 +79,6 @@ def read_files(files, base, show_line_numbers=False):
                     lang = lexer.aliases[0] if lexer.aliases else ""
                 except ClassNotFound:
                     pass
-                if show_line_numbers:
-                    numbered = []
-                    for i, line in enumerate(content.splitlines(), start=1):
-                        numbered.append(f"{i}: {line}")
-                    content = "\n".join(numbered)
                 blocks.append(f"### File: {rel}\n```{lang}\n{content}\n```")
                 total_lines += content.count("\n") + 1
                 total_chars += len(content)
@@ -96,15 +86,13 @@ def read_files(files, base, show_line_numbers=False):
             print(f"Error reading {fp}: {e}", file=sys.stderr)
     return "\n\n".join(blocks), total_lines, total_chars
 
-
 def main():
     parser = argparse.ArgumentParser(description="ContextWeaver - Repository Context Packager")
     parser.add_argument("--version", action="version", version=f"%(prog)s {TOOL_VERSION}")
     parser.add_argument("paths", nargs="+", help="Paths to files or directories")
-    parser.add_argument("-o", "--output", help="Write output to file (default: stdout)")
+    parser.add_argument("-o","--output", help="Write output to file (default: stdout)")
     parser.add_argument("--tokens", action="store_true", help="Estimate token count (~chars/4) to stderr")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Print progress messages to stderr")
-    parser.add_argument("--line-numbers", "-l", action="store_true", help="Include line numbers in file contents")
+    parser.add_argument("--verbose","-v", action="store_true", help="Print progress messages to stderr as files/directories are processed.")
 
     args = parser.parse_args()
 
@@ -118,7 +106,7 @@ def main():
 
     git = get_git_info(base)
     tree = structure_tree(files, base)
-    contents, total_lines, total_chars = read_files(files, base, show_line_numbers=args.line_numbers)
+    contents, total_lines, total_chars = read_files(files, base)
     summary = f"- Total files: {len(files)}\n- Total lines: {total_lines}"
 
     output = f"""# Repository Context
@@ -152,7 +140,6 @@ def main():
             sys.exit(1)
     else:
         print(output)
-
 
 if __name__ == "__main__":
     main()
