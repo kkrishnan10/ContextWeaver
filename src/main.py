@@ -1,58 +1,48 @@
-import os
-import sys
+# main.py
 import argparse
+import sys
+import os
 import subprocess
-from datetime import datetime
+from pygments.lexers import guess_lexer_for_filename
+from pygments.util import ClassNotFound
 
-def get_git_info(path):
-    try:
-        commit = subprocess.check_output(
-            ["git", "-C", path, "rev-parse", "HEAD"],
-            stderr=subprocess.DEVNULL
-        ).decode().strip()
-        branch = subprocess.check_output(
-            ["git", "-C", path, "rev-parse", "--abbrev-ref", "HEAD"],
-            stderr=subprocess.DEVNULL
-        ).decode().strip()
-        author = subprocess.check_output(
-            ["git", "-C", path, "log", "-1", "--pretty=format:%an <%ae>"],
-            stderr=subprocess.DEVNULL
-        ).decode().strip()
-        date = subprocess.check_output(
-            ["git", "-C", path, "log", "-1", "--pretty=format:%cd"],
-            stderr=subprocess.DEVNULL
-        ).decode().strip()
-        return commit, branch, author, date
-    except subprocess.CalledProcessError:
-        return None, None, None, None
+TOOL_VERSION = "0.1.0"
 
-def collect_files(paths, include_patterns=None, verbose=False):
-    collected = []
+def get_all_files(paths, verbose=False):
+    all_files = []
+    excluded_dirs = {'venv'}
+
     for path in paths:
-        if os.path.isdir(path):
+        abs_path = os.path.abspath(path)
+
+        if os.path.isfile(abs_path):
+            if not os.path.basename(abs_path).startswith('.'):
+                all_files.append(abs_path)
+                if verbose:
+                    print(f"Reading file: {abs_path}", file=sys.stderr)
+
+        elif os.path.isdir(abs_path):
             if verbose:
-                print(f"Processing directory: {path}", file=sys.stderr)
-            for root, dirs, files in os.walk(path):
+                print(f"Processing directory: {abs_path}", file=sys.stderr)
+            for root, dirs, files in os.walk(abs_path):
+                dirs[:] = [d for d in dirs if not d.startswith('.') and d not in excluded_dirs]
                 for file in files:
-                    filepath = os.path.join(root, file)
-                    if include_patterns and not any(
-                        filepath.endswith(p) for p in include_patterns
-                    ):
-                        continue
-                    if verbose:
-                        print(f"Reading file: {filepath}", file=sys.stderr)
-                    collected.append(filepath)
-        elif os.path.isfile(path):
-            if include_patterns and not any(
-                path.endswith(p) for p in include_patterns
-            ):
-                continue
-            if verbose:
-                print(f"Reading file: {path}", file=sys.stderr)
-            collected.append(path)
-        else:
-            print(f"Skipping invalid path: {path}", file=sys.stderr)
-    return collected
+                    if not file.startswith('.'):
+                        file_path = os.path.join(root, file)
+                        all_files.append(file_path)
+                        if verbose:
+                            print(f"Reading file: {file_path}", file=sys.stderr)
+    return all_files
+
+def get_git_info(repo_path):
+    try:
+        commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo_path, text=True, stderr=subprocess.PIPE).strip()
+        branch = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], cwd=repo_path, text=True, stderr=subprocess.PIPE).strip()
+        author = subprocess.check_output(['git', 'log', '-1', '--pretty=format:%an <%ae>'], cwd=repo_path, text=True, stderr=subprocess.PIPE).strip()
+        date = subprocess.check_output(['git', 'log', '-1', '--pretty=format:%ad'], cwd=repo_path, text=True, stderr=subprocess.PIPE).strip()
+        return f"- Commit: {commit}\n- Branch: {branch}\n- Author: {author}\n- Date: {date}"
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return "Not a git repository"
 
 def main():
     parser = argparse.ArgumentParser(description="Repository Context Packager")
@@ -60,7 +50,7 @@ def main():
     parser.add_argument(
         "-v", "--version",
         action="version",
-        version="ContextWeaver 0.1"
+        version=f"%(prog)s {TOOL_VERSION}"
     )
 
     parser.add_argument(
@@ -71,7 +61,7 @@ def main():
 
     parser.add_argument(
         "-o", "--output",
-        help="Path to the output file. If not specified, prints to stdout."
+        help="Path to the output file. If not specified, prints to standard output."
     )
 
     parser.add_argument(
@@ -81,12 +71,6 @@ def main():
     )
 
     parser.add_argument(
-        "--include",
-        help="Comma-separated list of file extensions/patterns to include."
-    )
-
-   
-    parser.add_argument(
         "--verbose", "-V",
         action="store_true",
         help="Print progress messages to stderr as files/directories are processed."
@@ -94,59 +78,13 @@ def main():
 
     args = parser.parse_args()
 
-    include_patterns = None
-    if args.include:
-        include_patterns = [p.strip() for p in args.include.split(",")]
+    file_list = get_all_files(args.paths, verbose=args.verbose)
 
-    files = collect_files(args.paths, include_patterns, verbose=args.verbose)
+    if not file_list:
+        print("Error: No files found in the specified paths.", file=sys.stderr)
+        sys.exit(1)
 
-   
-    output_lines = []
-    output_lines.append("# Repository Context\n")
-
-    repo_path = os.path.abspath(args.paths[0])
-    output_lines.append("## File System Location\n")
-    output_lines.append(repo_path + "\n")
-
-    commit, branch, author, date = get_git_info(repo_path)
-    output_lines.append("## Git Info\n")
-    if commit:
-        output_lines.append(f"- Commit: {commit}")
-        output_lines.append(f"- Branch: {branch}")
-        output_lines.append(f"- Author: {author}")
-        output_lines.append(f"- Date: {date}\n")
-    else:
-        output_lines.append("Not a git repository\n")
-
-    output_lines.append("## Structure\n")
-    for f in files:
-        rel_path = os.path.relpath(f, repo_path)
-        output_lines.append(rel_path)
-    output_lines.append("\n")
-
-    output_lines.append("## File Contents\n")
-    for f in files:
-        try:
-            with open(f, "r", encoding="utf-8") as file:
-                content = file.read()
-            output_lines.append(f"### File: {f}\n```")
-            output_lines.append(content)
-            output_lines.append("```\n")
-        except Exception as e:
-            print(f"Error reading {f}: {e}", file=sys.stderr)
-
-    output_lines.append("## Summary\n")
-    output_lines.append(f"- Total files: {len(files)}")
-    total_lines = sum(len(open(f, "r", encoding="utf-8").readlines()) for f in files)
-    output_lines.append(f"- Total lines: {total_lines}")
-
-    final_output = "\n".join(output_lines)
-
-    if args.output:
-        with open(args.output, "w", encoding="utf-8") as out_file:
-            out_file.write(final_output)
-    else:
-        print(final_output)
+    
 
 if __name__ == "__main__":
     main()
