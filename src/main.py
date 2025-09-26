@@ -45,47 +45,42 @@ def get_git_info(repo_path):
         return "Not a git repository"
 
 def main():
-    parser = argparse.ArgumentParser(description="Repository Context Packager")
-
     
-    parser.add_argument(
-        "-v", "--version",
-        action="version",
-        version=f"%(prog)s {TOOL_VERSION}"
-    )
+ parser = argparse.ArgumentParser(description="Repository Context Packager")
 
-   
-    parser.add_argument(
-        "paths",
-        nargs="+",
-        help="Paths to files or directories to include in the context."
-    )
+parser.add_argument(
+    "-v", "--version",
+    action="version",
+    version="ContextWeaver 0.1"
+)
 
-   
-    parser.add_argument(
-        "-o", "--output",
-        help="Path to the output file. If not specified, prints to standard output."
-    )
+parser.add_argument(
+    "paths",
+    nargs="+",
+    help="Paths to files or directories to include in the context."
+)
 
-   
-    parser.add_argument(
-        "--tokens",
-        action="store_true",
-        help="Estimate and display the token count for the context."
-    )
+parser.add_argument(
+    "-o", "--output",
+    help="Path to the output file. If not specified, prints to standard output."
+)
 
-    
-    parser.add_argument(
-        "--verbose", "-V",
-        action="store_true",
-        help="Print progress messages to stderr as files/directories are processed."
-    )
+parser.add_argument(
+    "--tokens",
+    action="store_true",
+    help="Estimate and display the token count for the context."
+)
 
-   
-    parser.add_argument(
-        "--include",
-        help="Comma-separated list of file extensions/patterns to include."
-    )
+parser.add_argument(
+    "--include",
+    help="Comma-separated list of file extensions/patterns to include."
+)
+
+parser.add_argument(
+    "--verbose", "-V",
+    action="store_true",
+    help="Print progress messages to stderr as files/directories are processed."
+)
 
     args = parser.parse_args()
 
@@ -97,7 +92,7 @@ def main():
         print("Error: No files found in the specified paths.", file=sys.stderr)
         sys.exit(1)
 
-    # Just a placeholder for now
+    
     print("Context packaging complete!")
 
 if __name__ == "__main__":
