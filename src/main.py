@@ -88,6 +88,8 @@ def main():
     parser.add_argument("paths", nargs="+", help="Paths to files or directories")
     parser.add_argument("-o","--output", help="Write output to file (default: stdout)")
     parser.add_argument("--tokens", action="store_true", help="Estimate token count (~chars/4) to stderr")
+    parser.add_argument("--verbose","-v", action="store_true", help="Print progress messages to stderr as files/directories are processed.")
+
     args = parser.parse_args()
 
     first_abs = os.path.abspath(args.paths[0])
