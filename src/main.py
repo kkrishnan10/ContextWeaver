@@ -50,6 +50,10 @@ def read_text(path: str) -> Tuple[str, str]:
 def header_for(path: str) -> str:
     rel = os.path.relpath(path, start=os.getcwd())
     return f"### File: {rel}"
+    
+def with_line_numbers(text: str) -> str:
+    lines = text.splitlines()
+    return "\n".join(f"{i+1}: {ln}" for i, ln in enumerate(lines)) + ("\n" if text.endswith("\n") else "")
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="ContextWeaver: print repository files as a single context.")
@@ -63,6 +67,8 @@ def main() -> None:
 
     
     parser.add_argument("-o", "--output", help="Write output to this file instead of stdout")
+    
+    parser.add_argument("-l", "--line-numbers", action="store_true", help="Prefix each output line with its 1-based line number")
 
     args = parser.parse_args()
 
@@ -80,7 +86,9 @@ def main() -> None:
             if err:
                 print(f"[ERROR] {err}", file=out)
             else:
-                print(content, end="" if content.endswith("\n") else "\n", file=out)
+                out_text = with_line_numbers(content) if args.line_numbers else content
+                print(out_text, end="" if out_text.endswith("\n") else "\n", file=out)
+
             print("```", file=out)
     finally:
         if args.output:
