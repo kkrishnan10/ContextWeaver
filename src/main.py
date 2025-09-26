@@ -1,145 +1,91 @@
-import argparse, sys, os, subprocess
+
+import argparse
+import sys
+import os
+import subprocess
 from pygments.lexers import guess_lexer_for_filename
 from pygments.util import ClassNotFound
 
 TOOL_VERSION = "0.1.0"
-MAX_BYTES = 16 * 1024
-EXCLUDED_DIRS = {".git", ".venv", "venv", "__pycache__"}
 
 def get_all_files(paths, verbose=False):
-    files = []
-    for p in paths:
-        ap = os.path.abspath(p)
-        if os.path.isfile(ap):
-            if not os.path.basename(ap).startswith("."):
-                if verbose:
-                    print(f"Reading file: {ap}", file=sys.stderr)
-                files.append(ap)
-        elif os.path.isdir(ap):
-            if verbose:
-                print(f"Processing directory: {ap}", file=sys.stderr)
-            for root, dirs, fs in os.walk(ap):
-                dirs[:] = [d for d in dirs if not d.startswith(".") and d not in EXCLUDED_DIRS]
-                for f in fs:
-                    if f.startswith("."):
-                        continue
-                    fp = os.path.join(root, f)
-                    if verbose:
-                        print(f"Reading file: {fp}", file=sys.stderr)
-                    files.append(fp)
-    return files
+    all_files = []
+    excluded_dirs = {'venv'}
 
-def get_git_info(base):
+    for path in paths:
+        abs_path = os.path.abspath(path)
+
+        if os.path.isfile(abs_path):
+            if not os.path.basename(abs_path).startswith('.'):
+                all_files.append(abs_path)
+                if verbose:
+                    print(f"Reading file: {abs_path}", file=sys.stderr)
+
+        elif os.path.isdir(abs_path):
+            if verbose:
+                print(f"Processing directory: {abs_path}", file=sys.stderr)
+            for root, dirs, files in os.walk(abs_path):
+                dirs[:] = [d for d in dirs if not d.startswith('.') and d not in excluded_dirs]
+                for file in files:
+                    if not file.startswith('.'):
+                        file_path = os.path.join(root, file)
+                        all_files.append(file_path)
+                        if verbose:
+                            print(f"Reading file: {file_path}", file=sys.stderr)
+    return all_files
+
+def get_git_info(repo_path):
     try:
-        run = lambda *cmd: subprocess.check_output(cmd, cwd=base, text=True, stderr=subprocess.PIPE).strip()
-        commit = run("git", "rev-parse", "HEAD")
-        branch = run("git", "rev-parse", "--abbrev-ref", "HEAD")
-        author = run("git", "log", "-1", "--pretty=format:%an <%ae>")
-        date   = run("git", "log", "-1", "--pretty=format:%ad")
+        commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo_path, text=True, stderr=subprocess.PIPE).strip()
+        branch = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], cwd=repo_path, text=True, stderr=subprocess.PIPE).strip()
+        author = subprocess.check_output(['git', 'log', '-1', '--pretty=format:%an <%ae>'], cwd=repo_path, text=True, stderr=subprocess.PIPE).strip()
+        date = subprocess.check_output(['git', 'log', '-1', '--pretty=format:%ad'], cwd=repo_path, text=True, stderr=subprocess.PIPE).strip()
         return f"- Commit: {commit}\n- Branch: {branch}\n- Author: {author}\n- Date: {date}"
-    except Exception:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         return "Not a git repository"
 
-def structure_tree(files, base):
-    tree = {}
-    for fp in files:
-        rel = os.path.relpath(fp, base)
-        parts = rel.split(os.sep)
-        cur = tree
-        for part in parts[:-1]:
-            cur = cur.setdefault(part, {})
-        cur[parts[-1]] = None
-
-    def walk(d, indent=""):
-        lines = []
-        items = sorted(d.items())
-        for i, (name, val) in enumerate(items):
-            last = (i == len(items) - 1)
-            prefix = "└── " if last else "├── "
-            lines.append(f"{indent}{prefix}{name}")
-            if isinstance(val, dict):
-                lines.extend(walk(val, indent + ("    " if last else "│   ")))
-        return lines
-
-    return "\n".join(walk(tree))
-
-def read_files(files, base):
-    blocks, total_lines, total_chars = [], 0, 0
-    for fp in sorted(files):
-        try:
-            size = os.path.getsize(fp)
-            with open(fp, "r", encoding="utf-8", errors="ignore") as f:
-                rel = os.path.relpath(fp, base)
-                content = f.read()
-                if size > MAX_BYTES:
-                    content = content[:MAX_BYTES] + f"\n. (file truncated > {MAX_BYTES//1024}KB)"
-                lang = ""
-                try:
-                    lexer = guess_lexer_for_filename(fp, content)
-                    lang = lexer.aliases[0] if lexer.aliases else ""
-                except ClassNotFound:
-                    pass
-                blocks.append(f"### File: {rel}\n```{lang}\n{content}\n```")
-                total_lines += content.count("\n") + 1
-                total_chars += len(content)
-        except Exception as e:
-            print(f"Error reading {fp}: {e}", file=sys.stderr)
-    return "\n\n".join(blocks), total_lines, total_chars
-
 def main():
-    parser = argparse.ArgumentParser(description="ContextWeaver - Repository Context Packager")
-    parser.add_argument("--version", action="version", version=f"%(prog)s {TOOL_VERSION}")
-    parser.add_argument("paths", nargs="+", help="Paths to files or directories")
-    parser.add_argument("-o","--output", help="Write output to file (default: stdout)")
-    parser.add_argument("--tokens", action="store_true", help="Estimate token count (~chars/4) to stderr")
-    parser.add_argument("--verbose","-v", action="store_true", help="Print progress messages to stderr as files/directories are processed.")
+    parser = argparse.ArgumentParser(description="Repository Context Packager")
+
+    parser.add_argument(
+        "-v", "--version",
+        action="version",
+        version=f"%(prog)s {TOOL_VERSION}"
+    )
+
+    parser.add_argument(
+        "paths",
+        nargs="+",
+        help="Paths to files or directories to include in the context."
+    )
+
+    parser.add_argument(
+        "-o", "--output",
+        help="Path to the output file. If not specified, prints to standard output."
+    )
+
+    parser.add_argument(
+        "--tokens",
+        action="store_true",
+        help="Estimate and display the token count for the context."
+    )
+
+    parser.add_argument(
+        "--verbose", "-V",
+        action="store_true",
+        help="Print progress messages to stderr as files/directories are processed."
+    )
 
     args = parser.parse_args()
 
-    first_abs = os.path.abspath(args.paths[0])
-    base = os.path.dirname(first_abs) if os.path.isfile(first_abs) else first_abs
+    file_list = get_all_files(args.paths, verbose=args.verbose)
 
-    files = get_all_files(args.paths, verbose=args.verbose)
-    if not files:
+    if not file_list:
         print("Error: No files found in the specified paths.", file=sys.stderr)
         sys.exit(1)
 
-    git = get_git_info(base)
-    tree = structure_tree(files, base)
-    contents, total_lines, total_chars = read_files(files, base)
-    summary = f"- Total files: {len(files)}\n- Total lines: {total_lines}"
-
-    output = f"""# Repository Context
-
-## File System Location
-{base}
-
-## Git Info
-{git}
-
-## Structure
-{tree}
-
-## File Contents
-{contents}
-
-## Summary
-{summary}
-""".strip()
-
-    if args.tokens:
-        print(f"Estimated tokens: {total_chars//4}", file=sys.stderr)
-
-    if args.output:
-        try:
-            with open(args.output, "w", encoding="utf-8") as f:
-                f.write(output + "\n")
-            print(f"Context written to {args.output}", file=sys.stderr)
-        except Exception as e:
-            print(f"Error writing to file {args.output}: {e}", file=sys.stderr)
-            sys.exit(1)
-    else:
-        print(output)
+    # Just a placeholder for now
+    print("Context packaging complete!")
 
 if __name__ == "__main__":
     main()
