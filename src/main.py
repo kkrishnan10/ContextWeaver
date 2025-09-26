@@ -1,10 +1,9 @@
-#main.py
 import argparse, sys, os, subprocess
 from pygments.lexers import guess_lexer_for_filename
 from pygments.util import ClassNotFound
 
 TOOL_VERSION = "0.1.0"
-MAX_BYTES = 16 * 1024  
+MAX_BYTES = 16 * 1024  # 16KB preview cutoff
 EXCLUDED_DIRS = {".git", ".venv", "venv", "__pycache__"}
 
 def eprint(msg: str) -> None:
@@ -23,7 +22,7 @@ def get_all_files(paths, verbose: bool = False):
             if verbose:
                 eprint(f"Processing directory: {ap}")
             for root, dirs, fs in os.walk(ap):
-                
+                # skip hidden and excluded dirs
                 dirs[:] = [d for d in dirs if not d.startswith(".") and d not in EXCLUDED_DIRS]
                 for f in fs:
                     if f.startswith("."):
@@ -49,7 +48,7 @@ def get_git_info(base):
         return "Not a git repository"
 
 def structure_tree(files, base):
-    
+    # build nested dict tree
     tree = {}
     for fp in files:
         rel = os.path.relpath(fp, base)
@@ -72,7 +71,7 @@ def structure_tree(files, base):
 
     return "\n".join(walk(tree))
 
-def read_files(files, base, line_numbers=False):
+def read_files(files, base):
     blocks, total_lines, total_chars = [], 0, 0
     for fp in sorted(files):
         try:
@@ -89,21 +88,11 @@ def read_files(files, base, line_numbers=False):
                 except ClassNotFound:
                     pass
 
-               
-                if line_numbers:
-                    ends_nl = content.endswith("\n")
-                    lines = content.splitlines()
-                    out_text = "\n".join(f"{i+1}: {ln}" for i, ln in enumerate(lines))
-                    if ends_nl or (out_text and not out_text.endswith("\n")):
-                        out_text += "\n"
-                else:
-                    out_text = content
-
-                blocks.append(f"### File: {rel}\n```{lang}\n{out_text}\n```")
+                blocks.append(f"### File: {rel}\n```{lang}\n{content}\n```")
                 total_lines += content.count("\n") + 1
-                total_chars += len(out_text)
+                total_chars += len(content)
         except Exception as e:
-            print(f"Error reading {fp}: {e}", file=sys.stderr)
+            eprint(f"Error reading {fp}: {e}")
     return "\n\n".join(blocks), total_lines, total_chars
 
 def main():
@@ -113,13 +102,9 @@ def main():
     parser.add_argument("-o","--output", help="Write output to file (default: stdout)")
     parser.add_argument("--tokens", action="store_true", help="Estimate token count (~chars/4) to stderr")
 
-    
+    # verbose (stderr progress). Use -V to avoid clashing with -v version
     parser.add_argument("--verbose", "-V", action="store_true",
                         help="Print progress messages to stderr while scanning/reading files")
-
-    
-    parser.add_argument("--line-numbers", "-l", action="store_true",
-                        help="Prefix each output line with its 1-based line number")
 
     args = parser.parse_args()
 
@@ -128,12 +113,12 @@ def main():
 
     files = get_all_files(args.paths, verbose=args.verbose)
     if not files:
-        print("Error: No files found in the specified paths.", file=sys.stderr)
+        eprint("Error: No files found in the specified paths.")
         sys.exit(1)
 
     git = get_git_info(base)
     tree = structure_tree(files, base)
-    contents, total_lines, total_chars = read_files(files, base, line_numbers=args.line_numbers)
+    contents, total_lines, total_chars = read_files(files, base)
     summary = f"- Total files: {len(files)}\n- Total lines: {total_lines}"
 
     output = f"""# Repository Context
@@ -155,15 +140,15 @@ def main():
 """.strip()
 
     if args.tokens:
-        print(f"Estimated tokens: {total_chars//4}", file=sys.stderr)
+        eprint(f"Estimated tokens: {total_chars//4}")
 
     if args.output:
         try:
             with open(args.output, "w", encoding="utf-8") as f:
                 f.write(output + "\n")
-            print(f"Context written to {args.output}", file=sys.stderr)
+            eprint(f"Context written to {args.output}")
         except Exception as e:
-            print(f"Error writing to file {args.output}: {e}", file=sys.stderr)
+            eprint(f"Error writing to file {args.output}: {e}")
             sys.exit(1)
     else:
         print(output)
