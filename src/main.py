@@ -71,7 +71,7 @@ def structure_tree(files, base):
 
     return "\n".join(walk(tree))
 
-def read_files(files, base):
+def read_files(files, base, line_numbers=False):
     blocks, total_lines, total_chars = [], 0, 0
     for fp in sorted(files):
         try:
@@ -88,9 +88,19 @@ def read_files(files, base):
                 except ClassNotFound:
                     pass
 
-                blocks.append(f"### File: {rel}\n```{lang}\n{content}\n```")
+                # Inline numbering (only when requested)
+                if line_numbers:
+                    ends_nl = content.endswith("\n")
+                    lines = content.splitlines()
+                    out_text = "\n".join(f"{i+1}: {ln}" for i, ln in enumerate(lines))
+                    if ends_nl or (out_text and not out_text.endswith("\n")):
+                        out_text += "\n"
+                else:
+                    out_text = content
+
+                blocks.append(f"### File: {rel}\n```{lang}\n{out_text}\n```")
                 total_lines += content.count("\n") + 1
-                total_chars += len(content)
+                total_chars += len(out_text)
         except Exception as e:
             eprint(f"Error reading {fp}: {e}")
     return "\n\n".join(blocks), total_lines, total_chars
@@ -106,6 +116,10 @@ def main():
     parser.add_argument("--verbose", "-V", action="store_true",
                         help="Print progress messages to stderr while scanning/reading files")
 
+    # line numbers
+    parser.add_argument("--line-numbers", "-l", action="store_true",
+                        help="Prefix each output line with its 1-based line number")
+
     args = parser.parse_args()
 
     first_abs = os.path.abspath(args.paths[0])
@@ -118,7 +132,7 @@ def main():
 
     git = get_git_info(base)
     tree = structure_tree(files, base)
-    contents, total_lines, total_chars = read_files(files, base)
+    contents, total_lines, total_chars = read_files(files, base, line_numbers=args.line_numbers)
     summary = f"- Total files: {len(files)}\n- Total lines: {total_lines}"
 
     output = f"""# Repository Context
@@ -155,3 +169,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
