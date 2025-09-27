@@ -1,4 +1,4 @@
-
+# src/main.py
 import argparse
 import os
 import sys
@@ -9,12 +9,11 @@ TOOL_VERSION = "0.1.0"
 EXCLUDED_DIRS = {"venv"}
 
 
-
 def eprint(msg: str) -> None:
     print(msg, file=sys.stderr)
 
 
-def get_all_files(paths: Iterable[str], verbose: bool = False) -> List[str]:
+def get_all_files(paths: Iterable[str]) -> List[str]:
     """
     Return a list of absolute file paths under the given paths.
     Skips hidden files/dirs (starting with '.') and EXCLUDED_DIRS.
@@ -26,31 +25,17 @@ def get_all_files(paths: Iterable[str], verbose: bool = False) -> List[str]:
         if os.path.isfile(ap):
             if not os.path.basename(ap).startswith("."):
                 files.append(ap)
-                if verbose:
-                    eprint(f"Reading file: {ap}")
-            else:
-                if verbose:
-                    eprint(f"Skipping hidden file: {ap}")
 
         elif os.path.isdir(ap):
-            if verbose:
-                eprint(f"Processing directory: {ap}")
             for root, dirs, fnames in os.walk(ap):
-                
-                dirs[:] = [
-                    d for d in dirs
-                    if not d.startswith(".") and d not in EXCLUDED_DIRS
-                ]
+                # prune dirs in-place
+                dirs[:] = [d for d in dirs if not d.startswith(".") and d not in EXCLUDED_DIRS]
                 for fname in fnames:
                     if fname.startswith("."):
                         continue
                     fpath = os.path.join(root, fname)
                     files.append(fpath)
-                    if verbose:
-                        eprint(f"Reading file: {fpath}")
-        else:
-            if verbose:
-                eprint(f"Skipping non-existent path: {ap}")
+        
 
     return files
 
@@ -69,12 +54,17 @@ def header_for(path: str) -> str:
     return f"### File: {rel}"
 
 
-def estimate_tokens(s: str) -> int:
-    """
-    Very rough token estimate (OpenAI-like): ~4 chars/token heuristic.
-    Good enough for quick counts without external deps.
-    """
+def with_line_numbers(text: str) -> str:
     
+    ends_nl = text.endswith("\n")
+    lines = text.splitlines()
+    numbered = "\n".join(f"{i+1}: {ln}" for i, ln in enumerate(lines))
+
+    return numbered + ("\n" if ends_nl or (numbered and not numbered.endswith("\n")) else "")
+
+
+def estimate_tokens(s: str) -> int:
+    """Very rough token estimate (~4 chars/token)."""
     return 0 if not s else max(1, (len(s) // 4))
 
 
@@ -82,25 +72,20 @@ def get_git_info(repo_path: str) -> str:
     """Best-effort git info; safe if repo or git is missing."""
     try:
         commit = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"],
-            cwd=repo_path, text=True, stderr=subprocess.PIPE
+            ["git", "rev-parse", "HEAD"], cwd=repo_path, text=True, stderr=subprocess.PIPE
         ).strip()
         branch = subprocess.check_output(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=repo_path, text=True, stderr=subprocess.PIPE
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=repo_path, text=True, stderr=subprocess.PIPE
         ).strip()
         author = subprocess.check_output(
-            ["git", "log", "-1", "--pretty=%ae"],
-            cwd=repo_path, text=True, stderr=subprocess.PIPE
+            ["git", "log", "-1", "--pretty=%ae"], cwd=repo_path, text=True, stderr=subprocess.PIPE
         ).strip()
         date = subprocess.check_output(
-            ["git", "log", "-1", "--pretty=%ad"],
-            cwd=repo_path, text=True, stderr=subprocess.PIPE
+            ["git", "log", "-1", "--pretty=%ad"], cwd=repo_path, text=True, stderr=subprocess.PIPE
         ).strip()
         return f"- Commit: {commit}\n- Branch: {branch}\n- Author: {author}\n- Date: {date}"
     except (subprocess.CalledProcessError, FileNotFoundError):
         return "Not a git repository"
-
 
 
 def main() -> None:
@@ -120,13 +105,13 @@ def main() -> None:
         help="Paths to files or directories to include in the context."
     )
 
-    
+   
     parser.add_argument(
         "-o", "--output",
         help="Write output to this file instead of stdout."
     )
 
-   
+    
     parser.add_argument(
         "--tokens",
         action="store_true",
@@ -135,32 +120,31 @@ def main() -> None:
 
     
     parser.add_argument(
-        "--verbose", "-V",
+        "--line-numbers", "-l",
         action="store_true",
-        help="Print progress messages to stderr while scanning/reading files."
+        help="Prefix each output line with its 1-based line number."
     )
 
-   
     args = parser.parse_args()
 
-   
-    files = get_all_files(args.paths, verbose=args.verbose)
+    
+    files = get_all_files(args.paths)
     if not files:
         eprint("Error: no files found under the provided paths.")
         sys.exit(1)
 
-    
+   
     out = open(args.output, "w", encoding="utf-8") if args.output else sys.stdout
     total_chars = 0
     try:
-        
+       
         root = os.path.abspath(args.paths[0])
         meta = get_git_info(root)
         print("## Repo", file=out)
         print(meta, file=out)
         print("", file=out)
 
-        
+       
         for f in files:
             content, err = read_text(f)
 
@@ -169,9 +153,9 @@ def main() -> None:
             if err:
                 print(f"[ERROR] {err}", file=out)
             else:
-                total_chars += len(content)
-                print(content, end="" if content.endswith("\n") else "\n", file=out)
-
+                text = with_line_numbers(content) if args.line_numbers else content
+                total_chars += len(text)
+                print(text, end="" if text.endswith("\n") else "\n", file=out)
             print("```", file=out)
             print("", file=out)
 
