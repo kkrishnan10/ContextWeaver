@@ -3,8 +3,7 @@ from pygments.lexers import guess_lexer_for_filename
 from pygments.util import ClassNotFound
 
 TOOL_VERSION = "0.1.0"
-MAX_BYTES = 16 * 1024  
-
+MAX_BYTES = 16 * 1024  # 16KB preview cutoff
 EXCLUDED_DIRS = {".git", ".venv", "venv", "__pycache__"}
 
 def get_all_files(paths):
@@ -36,7 +35,7 @@ def get_git_info(base):
         return "Not a git repository"
 
 def structure_tree(files, base):
-    
+    # build nested dict tree
     tree = {}
     for fp in files:
         rel = os.path.relpath(fp, base)
@@ -76,8 +75,17 @@ def read_files(files, base, line_numbers=False):
                 except ClassNotFound:
                     pass
 
-                out_text = with_line_numbers(content) if line_numbers else content
-                blocks.append(f"### File: {rel}\n```{lang}\n{content}\n```")
+                # Inline numbering (no helper = no NameError)
+                if line_numbers:
+                    ends_nl = content.endswith("\n")
+                    lines = content.splitlines()
+                    out_text = "\n".join(f"{i+1}: {ln}" for i, ln in enumerate(lines))
+                    if ends_nl or (out_text and not out_text.endswith("\n")):
+                        out_text += "\n"
+                else:
+                    out_text = content
+
+                blocks.append(f"### File: {rel}\n```{lang}\n{out_text}\n```")
                 total_lines += content.count("\n") + 1
                 total_chars += len(out_text)
         except Exception as e:
@@ -90,7 +98,9 @@ def main():
     parser.add_argument("paths", nargs="+", help="Paths to files or directories")
     parser.add_argument("-o","--output", help="Write output to file (default: stdout)")
     parser.add_argument("--tokens", action="store_true", help="Estimate token count (~chars/4) to stderr")
-    parser.add_argument("--line-numbers", "-l", action="store_true", help="Prefix each output line with its 1-based line number")
+    parser.add_argument("--line-numbers", "-l", action="store_true",
+                        help="Prefix each output line with its 1-based line number")
+
     args = parser.parse_args()
 
     first_abs = os.path.abspath(args.paths[0])
