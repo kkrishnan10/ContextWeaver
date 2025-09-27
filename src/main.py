@@ -59,7 +59,7 @@ def structure_tree(files, base):
 
     return "\n".join(walk(tree))
 
-# ---- line-numbering helper ----
+# ---- line-numbering helper (DEFINE BEFORE USE) ----
 def with_line_numbers(text: str) -> str:
     ends_nl = text.endswith("\n")
     lines = text.splitlines()
