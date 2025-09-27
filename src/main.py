@@ -4,7 +4,7 @@ from pygments.lexers import guess_lexer_for_filename
 from pygments.util import ClassNotFound
 
 TOOL_VERSION = "0.1.0"
-MAX_BYTES = 16 * 1024 
+MAX_BYTES = 16 * 1024  # 16KB preview cutoff
 EXCLUDED_DIRS = {".git", ".venv", "venv", "__pycache__"}
 
 def get_all_files(paths):
@@ -16,7 +16,7 @@ def get_all_files(paths):
                 files.append(ap)
         elif os.path.isdir(ap):
             for root, dirs, fs in os.walk(ap):
-                
+                # skip hidden and excluded dirs
                 dirs[:] = [d for d in dirs if not d.startswith(".") and d not in EXCLUDED_DIRS]
                 for f in fs:
                     if f.startswith("."):
@@ -36,7 +36,7 @@ def get_git_info(base):
         return "Not a git repository"
 
 def structure_tree(files, base):
-    
+    # build nested dict tree
     tree = {}
     for fp in files:
         rel = os.path.relpath(fp, base)
@@ -59,12 +59,12 @@ def structure_tree(files, base):
 
     return "\n".join(walk(tree))
 
-
+# ---- line-numbering helper ----
 def with_line_numbers(text: str) -> str:
     ends_nl = text.endswith("\n")
     lines = text.splitlines()
     numbered = "\n".join(f"{i+1}: {ln}" for i, ln in enumerate(lines))
-    
+    # mirror source newline (and add one if numbered non-empty but lacks it)
     return numbered + ("\n" if ends_nl or (numbered and not numbered.endswith("\n")) else "")
 
 def read_files(files, base, line_numbers=False):
@@ -98,7 +98,7 @@ def main():
     parser.add_argument("-o","--output", help="Write output to file (default: stdout)")
     parser.add_argument("--tokens", action="store_true", help="Estimate token count (~chars/4) to stderr")
 
-   
+    # ---- line numbers flag (this branch's feature) ----
     parser.add_argument("--line-numbers", "-l", action="store_true",
                         help="Prefix each output line with its 1-based line number")
 
