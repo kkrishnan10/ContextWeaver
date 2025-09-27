@@ -1,27 +1,40 @@
-# src/main.py
+#main.py
 import argparse, sys, os, subprocess
 from pygments.lexers import guess_lexer_for_filename
 from pygments.util import ClassNotFound
 
 TOOL_VERSION = "0.1.0"
-MAX_BYTES = 16 * 1024  # 16KB preview cutoff
+MAX_BYTES = 16 * 1024  
 EXCLUDED_DIRS = {".git", ".venv", "venv", "__pycache__"}
 
-def get_all_files(paths):
+def eprint(msg: str) -> None:
+    print(msg, file=sys.stderr)
+
+def get_all_files(paths, verbose: bool = False):
     files = []
     for p in paths:
         ap = os.path.abspath(p)
         if os.path.isfile(ap):
             if not os.path.basename(ap).startswith("."):
                 files.append(ap)
+                if verbose:
+                    eprint(f"Reading file: {ap}")
         elif os.path.isdir(ap):
+            if verbose:
+                eprint(f"Processing directory: {ap}")
             for root, dirs, fs in os.walk(ap):
-                # skip hidden and excluded dirs
+                
                 dirs[:] = [d for d in dirs if not d.startswith(".") and d not in EXCLUDED_DIRS]
                 for f in fs:
                     if f.startswith("."):
                         continue
-                    files.append(os.path.join(root, f))
+                    fp = os.path.join(root, f)
+                    files.append(fp)
+                    if verbose:
+                        eprint(f"Reading file: {fp}")
+        else:
+            if verbose:
+                eprint(f"Skipping non-existent path: {ap}")
     return files
 
 def get_git_info(base):
@@ -36,7 +49,7 @@ def get_git_info(base):
         return "Not a git repository"
 
 def structure_tree(files, base):
-    # build nested dict tree
+    
     tree = {}
     for fp in files:
         rel = os.path.relpath(fp, base)
@@ -76,7 +89,7 @@ def read_files(files, base, line_numbers=False):
                 except ClassNotFound:
                     pass
 
-                # inline line numbering (no helper, avoids NameError)
+               
                 if line_numbers:
                     ends_nl = content.endswith("\n")
                     lines = content.splitlines()
@@ -100,7 +113,11 @@ def main():
     parser.add_argument("-o","--output", help="Write output to file (default: stdout)")
     parser.add_argument("--tokens", action="store_true", help="Estimate token count (~chars/4) to stderr")
 
-    # line numbers flag (this branch’s feature)
+    
+    parser.add_argument("--verbose", "-V", action="store_true",
+                        help="Print progress messages to stderr while scanning/reading files")
+
+    
     parser.add_argument("--line-numbers", "-l", action="store_true",
                         help="Prefix each output line with its 1-based line number")
 
@@ -109,7 +126,7 @@ def main():
     first_abs = os.path.abspath(args.paths[0])
     base = os.path.dirname(first_abs) if os.path.isfile(first_abs) else first_abs
 
-    files = get_all_files(args.paths)
+    files = get_all_files(args.paths, verbose=args.verbose)
     if not files:
         print("Error: No files found in the specified paths.", file=sys.stderr)
         sys.exit(1)
