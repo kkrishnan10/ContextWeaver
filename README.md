@@ -47,5 +47,30 @@ python src/main.py . --tokens
 # Only include certain file patterns (comma-separated)
 python src/main.py . --include "*.py,*.md"
 ```
+## Features
+
+### Verbose Mode
+
+```bash
+# Show progress messages to stderr while scanning
+python src/main.py . --verbose
+# or shorter
+python src/main.py . -V
+```
+### Line Numbers
+
+```bash
+# Prefix each line of file content with its 1-based line number
+python src/main.py . --line-numbers
+# or shorter
+python src/main.py . -l
+```
+### Combined Usage
+
+```bash
+# Enable both verbose logging and line numbers
+python src/main.py . -V -l
+```
+
 ## License
 This project is licensed under the MIT License.
