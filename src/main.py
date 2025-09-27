@@ -69,14 +69,6 @@ def header_for(path: str) -> str:
     return f"### File: {rel}"
 
 
-def with_line_numbers(text: str) -> str:
-    
-    ends_nl = text.endswith("\n")
-    lines = text.splitlines()
-    numbered = "\n".join(f"{i+1}: {ln}" for i, ln in enumerate(lines))
-    return numbered + ("\n" if ends_nl or not numbered.endswith("\n") else "")
-
-
 def estimate_tokens(s: str) -> int:
     """
     Very rough token estimate (OpenAI-like): ~4 chars/token heuristic.
@@ -149,12 +141,6 @@ def main() -> None:
     )
 
    
-    parser.add_argument(
-        "--line-numbers", "-l",
-        action="store_true",
-        help="Prefix each output line with its 1-based line number."
-    )
-
     args = parser.parse_args()
 
    
@@ -183,10 +169,9 @@ def main() -> None:
             if err:
                 print(f"[ERROR] {err}", file=out)
             else:
-                text = with_line_numbers(content) if args.line_numbers else content
-                total_chars += len(text)
-               
-                print(text, end="" if text.endswith("\n") else "\n", file=out)
+                total_chars += len(content)
+                print(content, end="" if content.endswith("\n") else "\n", file=out)
+
             print("```", file=out)
             print("", file=out)
 
