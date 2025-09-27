@@ -59,14 +59,6 @@ def structure_tree(files, base):
 
     return "\n".join(walk(tree))
 
-# ---- line-numbering helper (DEFINE BEFORE USE) ----
-def with_line_numbers(text: str) -> str:
-    ends_nl = text.endswith("\n")
-    lines = text.splitlines()
-    numbered = "\n".join(f"{i+1}: {ln}" for i, ln in enumerate(lines))
-    # mirror source newline (and add one if numbered non-empty but lacks it)
-    return numbered + ("\n" if ends_nl or (numbered and not numbered.endswith("\n")) else "")
-
 def read_files(files, base, line_numbers=False):
     blocks, total_lines, total_chars = [], 0, 0
     for fp in sorted(files):
@@ -83,7 +75,17 @@ def read_files(files, base, line_numbers=False):
                     lang = lexer.aliases[0] if lexer.aliases else ""
                 except ClassNotFound:
                     pass
-                out_text = with_line_numbers(content) if line_numbers else content
+
+                # inline line numbering (no helper, avoids NameError)
+                if line_numbers:
+                    ends_nl = content.endswith("\n")
+                    lines = content.splitlines()
+                    out_text = "\n".join(f"{i+1}: {ln}" for i, ln in enumerate(lines))
+                    if ends_nl or (out_text and not out_text.endswith("\n")):
+                        out_text += "\n"
+                else:
+                    out_text = content
+
                 blocks.append(f"### File: {rel}\n```{lang}\n{out_text}\n```")
                 total_lines += content.count("\n") + 1
                 total_chars += len(out_text)
@@ -98,7 +100,7 @@ def main():
     parser.add_argument("-o","--output", help="Write output to file (default: stdout)")
     parser.add_argument("--tokens", action="store_true", help="Estimate token count (~chars/4) to stderr")
 
-    # ---- line numbers flag (this branch's feature) ----
+    # line numbers flag (this branch’s feature)
     parser.add_argument("--line-numbers", "-l", action="store_true",
                         help="Prefix each output line with its 1-based line number")
 
