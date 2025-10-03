@@ -1,6 +1,10 @@
 import argparse, sys, os, subprocess
 from pygments.lexers import guess_lexer_for_filename
 from pygments.util import ClassNotFound
+try:
+    import tomli
+except ImportError:
+    import tomllib as tomli
 
 TOOL_VERSION = "0.1.0"
 MAX_BYTES = 16 * 1024  # 16KB preview cutoff
@@ -8,6 +12,24 @@ EXCLUDED_DIRS = {".git", ".venv", "venv", "__pycache__"}
 
 def eprint(msg: str) -> None:
     print(msg, file=sys.stderr)
+
+def load_config() -> dict:
+    """Load configuration from .contextweaver-config.toml file in current directory."""
+    config_file = ".contextweaver-config.toml"
+    
+    if not os.path.exists(config_file):
+        return {}
+    
+    try:
+        with open(config_file, "rb") as f:
+            config = tomli.load(f)
+        return config
+    except tomli.TOMLDecodeError as e:
+        eprint(f"Error: Cannot parse {config_file} as valid TOML: {e}")
+        sys.exit(1)
+    except Exception as e:
+        eprint(f"Error reading {config_file}: {e}")
+        sys.exit(1)
 
 def get_all_files(paths, verbose: bool = False):
     files = []
