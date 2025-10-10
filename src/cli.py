@@ -2,9 +2,10 @@ from __future__ import annotations
 import argparse, sys
 from pathlib import Path
 
-from .scanner import iter_files
-from .formatter import make_snapshot
-from .utils import estimate_tokens, normalize_patterns, to_stderr
+
+from scanner import iter_files
+from formatter import make_snapshot
+from utils import estimate_tokens, normalize_patterns, to_stderr
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="ContextWeaver: generate a text snapshot of your repo/files")
