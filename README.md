@@ -1,7 +1,7 @@
 # ContextWeaver
 
 **ContextWeaver** is a command-line tool designed to help developers package and share their codebase with Large Language Models (LLMs) like ChatGPT.
-When you want to ask an AI tool about your code, it’s often hard to know what and how much to copy. 
+When you want to ask an AI tool about your code, it’s often hard to know what and how much to copy. ContextWeaver automates this process by scanning your files, filtering relevant content, and combining everything into a single, ready-to-share document.
 
 ContextWeaver solves this by:
 - Scanning your repository or selected files
@@ -46,6 +46,10 @@ python src/main.py . --tokens
 
 # Only include certain file patterns (comma-separated)
 python src/main.py . --include "*.py,*.md"
+
+# Generate a snapshot of your codebase
+python3 src/main.py . -V -l --tokens --include=*.py,*.md -o snapshot.txt
+
 ```
 ## Features
 
@@ -71,6 +75,21 @@ python src/main.py . -l
 # Enable both verbose logging and line numbers
 python src/main.py . -V -l
 ```
+---
+## What's New in Refactored 0.1
+
+In this refactored version, the codebase has been redesigned for **maintainability**, **readability**, and **extensibility**.  
+The main improvements include:
+
+- **Separated CLI logic** into `src/cli.py`  
+- **Introduced modular file scanning and filtering** (`scanner.py`, `filters.py`)  
+- **Added utility helpers** for clean I/O and formatting (`utils.py`, `formatter.py`)  
+- **Improved variable naming** and reduced duplication  
+- **Enhanced argument parsing** for better usability  
+
+These changes make ContextWeaver easier to maintain and prepare it for future enhancements such as automated testing and configuration file support.
+
+---
 
 ## License
 This project is licensed under the MIT License.
