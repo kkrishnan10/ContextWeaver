@@ -1,6 +1,13 @@
 import argparse, sys, os, subprocess
 from pygments.lexers import guess_lexer_for_filename
 from pygments.util import ClassNotFound
+from __future__ import annotations
+
+from cli import main
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+    
 try:
     import tomli
 except ImportError:
