@@ -2,7 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterator, List
 import os, sys
-from .filters import should_include, should_exclude_dir
+from filters import should_include, should_exclude_dir
 
 def iter_files(targets: List[str], include_patterns: List[str], verbose: bool=False) -> Iterator[Path]:
     """Yield files from given targets (files or directories), honoring include patterns."""
