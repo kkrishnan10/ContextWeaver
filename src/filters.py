@@ -1,17 +1,19 @@
 from __future__ import annotations
 import fnmatch
-from pathlib import Path
+from typing import List
 
-def should_include(path: Path, include_patterns: list[str] | None) -> bool:
-    """Return True if file matches any include pattern (or all if None)."""
-    if include_patterns is None:
+DEFAULT_EXCLUDES = {".git", "__pycache__", "node_modules", ".venv", ".idea"}
+
+def should_exclude_dir(dirname: str) -> bool:
+    """Return True if directory should be excluded (works with plain names)."""
+    if dirname in DEFAULT_EXCLUDES:
         return True
-    name = path.name
-    for pat in include_patterns:
-        if fnmatch.fnmatch(name, pat):
-            return True
-    return False
+   
+    return dirname.startswith(".")
 
-def should_exclude_dir(path: Path) -> bool:
-    """Return True if directory should be skipped."""
-    return any(name.startswith('.') for name in path.parts)
+def should_include(path: str, patterns: List[str]) -> bool:
+    """Return True if path matches any include pattern; include all if patterns empty."""
+    if not patterns:
+        return True
+    
+    return any(fnmatch.fnmatch(path, pat) for pat in patterns)
