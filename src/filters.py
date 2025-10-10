@@ -1,29 +1,17 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-cat <<'EOF' > src/filters.py
->>>>>>> 48a21fe (Create filters.py)
-=======
->>>>>>> 41e3ea2 (Update filters.py)
 from __future__ import annotations
 import fnmatch
-from typing import List
+from pathlib import Path
 
-DEFAULT_EXCLUDES = {".git", "__pycache__", "node_modules", ".venv", ".idea"}
-
-def should_exclude_dir(dirname: str) -> bool:
-    """Return True if directory should be excluded."""
-    return dirname in DEFAULT_EXCLUDES
-
-def should_include(path: str, patterns: List[str]) -> bool:
-    """Return True if path matches any pattern; include all if patterns empty."""
-    if not patterns:
+def should_include(path: Path, include_patterns: list[str] | None) -> bool:
+    """Return True if file matches any include pattern (or all if None)."""
+    if include_patterns is None:
         return True
-    return any(fnmatch.fnmatch(path, pat) for pat in patterns)
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-EOF
->>>>>>> 48a21fe (Create filters.py)
-=======
->>>>>>> 41e3ea2 (Update filters.py)
+    name = path.name
+    for pat in include_patterns:
+        if fnmatch.fnmatch(name, pat):
+            return True
+    return False
+
+def should_exclude_dir(path: Path) -> bool:
+    """Return True if directory should be skipped."""
+    return any(name.startswith('.') for name in path.parts)
