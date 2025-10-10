@@ -2,7 +2,7 @@ from __future__ import annotations
 import argparse, sys
 from pathlib import Path
 
-
+# Plain imports so `python src/main.py ...` works
 from scanner import iter_files
 from formatter import make_snapshot
 from utils import estimate_tokens, normalize_patterns, to_stderr

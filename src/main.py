@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+"""Main entrypoint for ContextWeaver (Lab 5 refactor)."""
+
 from cli import main
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
+
     
 import argparse, sys, os, subprocess
 from pygments.lexers import guess_lexer_for_filename
 from pygments.util import ClassNotFound
-    
+
 try:
     import tomli
 except ImportError:
@@ -199,4 +202,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 

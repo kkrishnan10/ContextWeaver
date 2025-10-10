@@ -1,3 +1,10 @@
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+cat <<'EOF' > src/filters.py
+>>>>>>> 48a21fe (Create filters.py)
+=======
+>>>>>>> 41e3ea2 (Update filters.py)
 from __future__ import annotations
 import fnmatch
 from typing import List
@@ -13,3 +20,10 @@ def should_include(path: str, patterns: List[str]) -> bool:
     if not patterns:
         return True
     return any(fnmatch.fnmatch(path, pat) for pat in patterns)
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+EOF
+>>>>>>> 48a21fe (Create filters.py)
+=======
+>>>>>>> 41e3ea2 (Update filters.py)
