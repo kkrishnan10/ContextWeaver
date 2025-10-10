@@ -11,7 +11,14 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="ContextWeaver: generate a text snapshot of your repo/files")
     p.add_argument("targets", nargs="+", help="Files or directories to include in snapshot")
     p.add_argument("-o", "--output", help="Write snapshot to file instead of stdout")
-    p.add_argument("--include", dest="include", metavar="PATTERNS", type=str, nargs="?", help="Comma-separated glob patterns (e.g., '*.py,*.md')")
+   p.add_argument(
+    "--include",
+    dest="include",
+    metavar="PATTERNS",
+    type=str,
+    nargs="?",
+    help="Comma-separated glob patterns (e.g., '*.py,*.md')",
+)
     p.add_argument("--tokens", action="store_true", help="Print ~token count (~chars/4) to stderr")
     p.add_argument("-V", "--verbose", action="store_true", help="Verbose messages to stderr")
     p.add_argument("-l", "--line-numbers", action="store_true", help="Prefix each line with its 1-based number")
