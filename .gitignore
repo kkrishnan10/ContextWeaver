@@ -212,3 +212,5 @@ out.txt
 out.txt
 output.txt
 snapshot.txt
+node_modules/
+*.log
