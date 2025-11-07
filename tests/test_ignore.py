@@ -119,12 +119,11 @@ def test_should_skip_respects_directory_patterns():
 def test_should_skip_matches_simple_globs():
     patterns = ["*.py", "README.md"]
 
-    
+  
     assert should_skip("main.py", patterns)
     assert should_skip("README.md", patterns)
+    assert should_skip("src/main.py", patterns)
 
-    
-    assert not should_skip("src/main.py", patterns)
 
 
 def test_should_skip_handles_windows_style_paths():
