@@ -1,2 +1,4 @@
 Pygments
 tomli
+pytest
+pytest-cov
