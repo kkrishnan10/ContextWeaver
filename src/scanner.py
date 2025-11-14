@@ -20,7 +20,6 @@ def iter_files(targets: List[str], include_patterns: List[str], verbose: bool=Fa
         yield f
     elif verbose:
        sys.stderr.write(f"[skip] not included by pattern: {rel}\n")
-
         else:
             for root, dirs, files in os.walk(p):
                 
