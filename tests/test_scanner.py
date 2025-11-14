@@ -69,3 +69,8 @@ def test_iter_files_includes_all_when_patterns_empty(tmp_path):
     assert "b.py" in rel_paths
 
     assert "node_modules/ignored.js" not in rel_paths
+    
+def test_iter_files_ignores_nonexistent_target(tmp_path):
+    non_existent = tmp_path / "does_not_exist"
+    files = list(iter_files([str(non_existent)], include_patterns=["*"]))
+    assert files == []
