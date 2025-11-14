@@ -16,10 +16,11 @@ def iter_files(targets: List[str], include_patterns: List[str], verbose: bool=Fa
             continue
         if p.is_file():
             rel = p.as_posix()
-            if should_include(rel, include_patterns):
-                yield p
-            elif verbose:
-                sys.stderr.write(f"[skip] not included by pattern: {rel}\n")
+           if should_include(rel, include_patterns):
+    return
+elif verbose:
+    sys.stderr.write(f"[skip] not included by pattern: {rel}\n")
+
         else:
             for root, dirs, files in os.walk(p):
                 # prune excluded dirs
