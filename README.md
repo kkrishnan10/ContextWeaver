@@ -107,8 +107,6 @@ These changes make ContextWeaver easier to maintain and prepare it for future en
 
 ---
 
----
-
 ## Troubleshooting
 
 ```md
