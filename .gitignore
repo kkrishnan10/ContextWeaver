@@ -214,3 +214,5 @@ output.txt
 snapshot.txt
 node_modules/
 *.log
+contextweaver_output.txt
+rust-cli-tool/
