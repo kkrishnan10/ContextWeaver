@@ -24,6 +24,12 @@ source .venv/bin/activate
 
 pip install -r requirements.txt
 
+Install from PyPI
+pip install contextweaver
+
+Install from TestPyPI
+python3 -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple contextweaver
+
 ```
 
 ## Usage
@@ -49,6 +55,16 @@ python src/main.py . --include "*.py,*.md"
 
 # Generate a snapshot of your codebase
 python3 src/main.py . -V -l --tokens --include=*.py,*.md -o snapshot.txt
+
+# Command Line Usage (After Installing via pip)
+Once installed, run:
+contextweaver --help
+
+# Generate a snapshot of the current folder
+contextweaver . -o snapshot.txt
+
+# Analyze a specific folder
+contextweaver ./src -o src_snapshot.txt
 
 ```
 ## Features
@@ -91,5 +107,21 @@ These changes make ContextWeaver easier to maintain and prepare it for future en
 
 ---
 
+---
+
+## Troubleshooting
+
+```md
+
+### ERROR: Requires-Python >=3.10
+Your Python version is too old. Use Python 3.10+ or create a new venv with it.
+
+### contextweaver: command not found
+Your virtual environment is not active or pip install didn't update your PATH.
+
+### LibreSSL warning on macOS
+Safe to ignore — does not affect installation or usage.
+
+```
 ## License
 This project is licensed under the MIT License.
